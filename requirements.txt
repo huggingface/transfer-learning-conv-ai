@@ -1,0 +1,5 @@
+torch
+pytorch-ignite
+pytorch-pretrained-bert >= 0.6.2
+tensorboardX
+tensorflow  # for tensorboardX
