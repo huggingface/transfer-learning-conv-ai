@@ -1,4 +1,4 @@
-# How to build a State-of-the-Art Conversational AI with Transfer Learning
+# 🦄 Building a State-of-the-Art Conversational AI with Transfer Learning
 
 The present repo contains the code accompanying the blog post [🦄 How to build a State-of-the-Art Conversational AI with Transfer Learning](https://medium.com/@Thomwolf/how-to-build-a-state-of-the-art-conversational-ai-with-transfer-learning-2d818ac26313).
 
