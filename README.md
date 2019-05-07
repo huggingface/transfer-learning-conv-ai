@@ -49,11 +49,10 @@ device | `str` | `"cuda" if torch.cuda.is_available() else "cpu"` | Device (cuda
 fp16 | `str` | `""` | Set to O0, O1, O2 or O3 for fp16 training (see apex documentation)
 local_rank | `int` | `-1` | Local rank for distributed training (-1: not distributed)
 
-Here is how to reproduce our results on a server with 8 V100 GPUs:
+Here is how to reproduce our results on a server with 8 V100 GPUs (adapt number of nodes and batch sizes to your configuration):
 
 ```bash
 python -m torch.distributed.launch --nproc_per_node=8 ./train.py --gradient_accumulation_steps=4 --lm_coef=2.0 --max_history=2 --n_epochs=1 --num_candidates=4 --personality_permutations=2 --train_batch_size=2 --valid_batch_size=2
-python -m torch.distributed.launch --nproc_per_node=8 ./train.py --gradient_accumulation_steps=4 --lm_coef=2.0 --max_history=2 --n_epochs=3 --num_candidates=4 --personality_permutations=1 --train_batch_size=2 --valid_batch_size=2 --eval_before_start --model_name gpt2
 ```
 
 ## Using the interaction script
