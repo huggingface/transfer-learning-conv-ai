@@ -6,7 +6,7 @@ This code is a clean and commented code base with training and testing scripts t
 
 This codebase can be used to reproduce the results of HuggingFace's participation to NeurIPS 2018 dialog competition [ConvAI2](http://convai.io/) which won the automatic metrics track. The 3k+ lines of competition code was distilled in about 250 lines of training code with distributed & FP16 options to form the present repository.
 
-This model can be trained in about one hour on a 8 V100 cloud instance (currently cost about $25) and a pre-trained model is also made available.
+This model can be trained in about one hour on a 8 V100 cloud instance (currently costs about $25) and a pre-trained model is also made available.
 
 ## Installation
 
