@@ -64,7 +64,7 @@ You can then use the interactive script to interact with the model simply by poi
 Here is an example command line to run the interactive script:
 
 ```bash
-python ./interact.py --model ./data/Apr17_13-31-38_thunder/  # run the interactive script with a training checkpoint
+python ./interact.py --model_checkpoint ./data/Apr17_13-31-38_thunder/  # run the interactive script with a training checkpoint
 python ./interact.py  # run the interactive script with the finetuned model on our S3
 ```
 
@@ -102,7 +102,7 @@ You can then run the evaluation script from `ParlAI` base folder:
 ```bash
 cd ParlAI
 python ../convai_evaluation.py --eval_type hits@1  # to download and evaluate our fine-tuned model on hits@1 metric
-python ../convai_evaluation.py --eval_type hits@1  --model ./data/Apr17_13-31-38_thunder/  # to evaluate a training checkpoint on hits@1 metric
+python ../convai_evaluation.py --eval_type hits@1  --model_checkpoint ./data/Apr17_13-31-38_thunder/  # to evaluate a training checkpoint on hits@1 metric
 ```
 
 The evaluation script accept a few arguments to select the evaluation metric and tweak the decoding algorithm:

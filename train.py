@@ -111,7 +111,7 @@ def train():
     parser = ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
     parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
-    parser.add_argument("--model", type=str, default="openai-gpt", help="Path, url or short name of the model")
+    parser.add_argument("--model_checkpoint", type=str, default="openai-gpt", help="Path, url or short name of the model")
     parser.add_argument("--num_candidates", type=int, default=2, help="Number of candidates for training")
     parser.add_argument("--max_history", type=int, default=2, help="Number of previous exchanges to keep in history")
     parser.add_argument("--train_batch_size", type=int, default=4, help="Batch size for training")
@@ -142,10 +142,10 @@ def train():
         torch.distributed.init_process_group(backend='nccl', init_method='env://')
 
     logger.info("Prepare tokenizer, pretrained model and optimizer - add special tokens for fine-tuning")
-    tokenizer_class = GPT2Tokenizer if "gpt2" in args.model else OpenAIGPTTokenizer
-    tokenizer = tokenizer_class.from_pretrained(args.model)
-    model_class = GPT2DoubleHeadsModel if "gpt2" in args.model else OpenAIGPTDoubleHeadsModel
-    model = model_class.from_pretrained(args.model)
+    tokenizer_class = GPT2Tokenizer if "gpt2" in args.model_checkpoint else OpenAIGPTTokenizer
+    tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
+    model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
+    model = model_class.from_pretrained(args.model_checkpoint)
     tokenizer.set_special_tokens(SPECIAL_TOKENS)
     model.set_num_special_tokens(len(SPECIAL_TOKENS))
     model.to(args.device)

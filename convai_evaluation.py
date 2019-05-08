@@ -27,7 +27,7 @@ class TransformerAgent(Agent):
     @staticmethod
     def add_cmdline_args(argparser):
         agent_args = argparser.add_argument_group('Agent parameters')
-        agent_args.add_argument("--model", type=str, default="", help="Path, url or short name of the model")
+        agent_args.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model")
         agent_args.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
         agent_args.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
         agent_args.add_argument("--eval_type", type=str, default="hits@1", help="hits@1, ppl or f1")
@@ -55,23 +55,23 @@ class TransformerAgent(Agent):
 
         if shared is None:
             self.logger.info("Get pretrained model and tokenizer")
-            if args.model == "":
-                args.model = download_pretrained_model()
+            if args.model_checkpoint == "":
+                args.model_checkpoint = download_pretrained_model()
 
-            self.tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model)
+            self.tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model_checkpoint)
             if self.args.eval_type == "hits@1":
-                self.model = OpenAIGPTDoubleHeadsModel.from_pretrained(args.model)
+                self.model_checkpoint = OpenAIGPTDoubleHeadsModel.from_pretrained(args.model_checkpoint)
             else:
-                self.model = OpenAIGPTLMHeadModel.from_pretrained(args.model)
-            self.model.to(args.device)
-            self.model.eval()
+                self.model_checkpoint = OpenAIGPTLMHeadModel.from_pretrained(args.model_checkpoint)
+            self.model_checkpoint.to(args.device)
+            self.model_checkpoint.eval()
 
             self.logger.info("Build BPE prefix dictionary")
             convai_dict = build_dict()
             assert len(convai_dict) == 19304
             self.prefix2words = self.get_prefix2words(convai_dict)
         else:
-            self.model = shared['model']
+            self.model_checkpoint = shared['model']
             self.tokenizer = shared['tokenizer']
             self.prefix2words = shared['prefix2words']
 
@@ -136,7 +136,7 @@ class TransformerAgent(Agent):
                 tensor_inputs[input_name] = tensor
 
             with torch.no_grad():
-                _, mc_logits = self.model(**tensor_inputs)
+                _, mc_logits = self.model_checkpoint(**tensor_inputs)
 
             val, ind = torch.sort(mc_logits[0], descending=True)
 
@@ -148,7 +148,7 @@ class TransformerAgent(Agent):
         else:
             # We are in interactive of f1 evaluation mode => just sample
             with torch.no_grad():
-                out_ids, _ = sample_sequence(self.persona, self.history, self.tokenizer, self.model, self.args)
+                out_ids, _ = sample_sequence(self.persona, self.history, self.tokenizer, self.model_checkpoint, self.args)
             out_text = self.tokenizer.decode(out_ids, skip_special_tokens=True,
                                              clean_up_tokenization_spaces=(self.args.eval_type != 'f1'))
             reply = {'text': out_text}
@@ -167,7 +167,7 @@ class TransformerAgent(Agent):
         token_type_ids = torch.tensor(instance["token_type_ids"], device=self.args.device).unsqueeze(0)
 
         with torch.no_grad():
-            logits = self.model(input_ids, token_type_ids=token_type_ids)
+            logits = self.model_checkpoint(input_ids, token_type_ids=token_type_ids)
 
         probs = F.softmax(logits[0, -1], dim=0)
 
@@ -196,7 +196,7 @@ class TransformerAgent(Agent):
     def share(self):
         shared = super(TransformerAgent, self).share()
         shared['tokenizer'] = self.tokenizer
-        shared['model'] = self.model
+        shared['model'] = self.model_checkpoint
         shared['prefix2words'] = self.prefix2words
         return shared
 

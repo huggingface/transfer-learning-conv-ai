@@ -85,7 +85,7 @@ def run():
     parser = ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
     parser.add_argument("--dataset_cache", type=str, default='./dataset_cache.bin', help="Path or url of the dataset cache")
-    parser.add_argument("--model", type=str, default="", help="Path, url or short name of the model")
+    parser.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model")
     parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
 
@@ -102,16 +102,16 @@ def run():
     logger = logging.getLogger(__file__)
     logger.info(pformat(args))
 
-    if args.model == "":
-        args.model = download_pretrained_model()
+    if args.model_checkpoint == "":
+        args.model_checkpoint = download_pretrained_model()
 
     random.seed(args.seed)
     torch.random.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
 
     logger.info("Get pretrained model and tokenizer")
-    tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model)
-    model = OpenAIGPTLMHeadModel.from_pretrained(args.model)
+    tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model_checkpoint)
+    model = OpenAIGPTLMHeadModel.from_pretrained(args.model_checkpoint)
     model.to(args.device)
     model.eval()
 
