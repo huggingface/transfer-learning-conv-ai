@@ -13,8 +13,8 @@ This model can be trained in about one hour on a 8 V100 cloud instance (currentl
 To install and use the training and inference scripts please clone the repo and install the requirements:
 
 ```bash
-git clone https://github.com/huggingface/Transfer-Learning-Chatbot
-cd Transfer-Learning-Chatbot
+git clone https://github.com/huggingface/transfer-learning-conv-ai
+cd transfer-learning-conv-ai
 pip install -r requirements.txt
 ```
 
