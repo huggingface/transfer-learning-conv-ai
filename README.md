@@ -18,6 +18,10 @@ cd Transfer-Learning-Chatbot
 pip install -r requirements.txt
 ```
 
+## Pretrained model
+
+We make a pretrained and fine-tuned model available on our S3 [here](https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/finetuned_chatbot_gpt.tar.gz). The easiest way to download and use this model is just to run the `interact.py` script to talk with the model. Without any argument, this script will automatically download and cache our model.
+
 ## Using the training script
 
 The training script can be used in single GPU or multi GPU settings:
