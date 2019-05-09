@@ -21,13 +21,17 @@ RUN apt-get install -y \
 RUN ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime && \
     dpkg-reconfigure --frontend noninteractive tzdata
 
-# maskrcnn
+# transfer-learning-conv-ai
 ENV PYTHONPATH /usr/local/lib/python3.6 
 COPY . ./
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 
 # model zoo
-RUN curl https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/finetuned_chatbot_gpt.tar.gz > finetuned_chatbot_gpt.tar.gz
-
+RUN mkdir models && \
+    curl https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/finetuned_chatbot_gpt.tar.gz > models/finetuned_chatbot_gpt.tar.gz && \
+    cd models/ && \
+    tar -xvzf finetuned_chatbot_gpt.tar.gz && \
+    rm finetuned_chatbot_gpt.tar.gz
+    
 CMD ["bash"]
