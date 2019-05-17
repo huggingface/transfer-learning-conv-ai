@@ -18,6 +18,29 @@ cd transfer-learning-conv-ai
 pip install -r requirements.txt
 ```
 
+## Installation with Docker
+
+To install using docker please build the self-contained image:
+
+```bash
+docker build -t convai .
+```
+
+You can then enter the image  
+
+```bash
+ip-192-168-22-157:transfer-learning-conv-ai loretoparisi$ docker run --rm -it convai bash
+root@91e241bb823e:/# ls
+Dockerfile  README.md  boot                  dev  home         lib    media  models  proc              root  sbin  sys  train.py  utils.py
+LICENCE     bin        convai_evaluation.py  etc  interact.py  lib64  mnt    opt     requirements.txt  run   srv   tmp  usr       var
+```
+
+You can then run the `interact.py` script on the pretrained model:
+
+```bash
+python3 interact.py --model models/
+```
+
 ## Pretrained model
 
 We make a pretrained and fine-tuned model available on our S3 [here](https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/finetuned_chatbot_gpt.tar.gz). The easiest way to download and use this model is just to run the `interact.py` script to talk with the model. Without any argument, this script will automatically download and cache our model.
