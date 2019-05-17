@@ -18,7 +18,7 @@ from utils import get_dataset_personalities, download_pretrained_model
 def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_value=-float('Inf')):
     """ Filter a distribution of logits using top-k, top-p (nucleus) and/or threshold filtering
         Args:
-            logits: logits distribution shape (..., vocabulary size)
+            logits: logits distribution shape (vocabulary size)
             top_k: <=0: no filtering, >0: keep only top k tokens with highest probability.
             top_p: <=0.0: no filtering, >0.0: keep only a subset S of candidates, where S is the smallest subset
                 whose total probability mass is greater than or equal to the threshold top_p.
@@ -26,6 +26,7 @@ def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_va
                 the threshold top_p.
             threshold: a minimal threshold to keep logits
     """
+    assert logits.dim() == 1  # Only work for batch size 1 for now - could update but it would obfuscate a bit the code
     top_k = min(top_k, logits.size(-1))
     if top_k > 0:
         # Remove all tokens with a probability less than the last token in the top-k tokens
