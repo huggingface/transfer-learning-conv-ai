@@ -11,7 +11,7 @@ from pprint import pformat
 import torch
 import torch.nn.functional as F
 
-from pytorch_pretrained_bert import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
+from pytorch_pretrained_bert import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
 from train import SPECIAL_TOKENS, build_input_from_segments
 from utils import get_dataset_personalities, download_pretrained_model
 
@@ -67,6 +67,8 @@ def sample_sequence(personality, history, tokenizer, model, args, current_output
 
         logits = model(input_ids, token_type_ids=token_type_ids)
 
+        if "gpt2" == args.model:
+            logits = logits[0]
         logits = logits[0, -1, :] / args.temperature
         logits = top_filtering(logits, top_k=args.top_k, top_p=args.top_p)
         probs = F.softmax(logits, dim=-1)
@@ -86,6 +88,7 @@ def run():
     parser = ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
     parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
+    parser.add_argument("--model", type=str, default="gpt", help="Model type (gpt or gpt2)")
     parser.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model")
     parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
@@ -111,8 +114,11 @@ def run():
     torch.cuda.manual_seed(args.seed)
 
     logger.info("Get pretrained model and tokenizer")
-    tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model_checkpoint)
-    model = OpenAIGPTLMHeadModel.from_pretrained(args.model_checkpoint)
+    tokenizer_class = GPT2Tokenizer if "gpt2" == args.model else OpenAIGPTTokenizer
+    tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
+    model_class = GPT2LMHeadModel if "gpt2" == args.model else OpenAIGPTLMHeadModel
+    model = model_class.from_pretrained(args.model_checkpoint)
+
     model.to(args.device)
     model.eval()
 
