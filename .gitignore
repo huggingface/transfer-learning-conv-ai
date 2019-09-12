@@ -1,4 +1,5 @@
 .vscode
+*.sh
 experiments/
 data/
 dataset_cache*
