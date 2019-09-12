@@ -11,7 +11,8 @@ from pprint import pformat
 import torch
 import torch.nn.functional as F
 
-from pytorch_pretrained_bert import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
+# Migration Notes: pytorch_pretrained_bert -> pytorch_transformers. 
+from pytorch_transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
 from train import SPECIAL_TOKENS, build_input_from_segments
 from utils import get_dataset_personalities, download_pretrained_model
 
