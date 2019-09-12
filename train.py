@@ -16,12 +16,19 @@ from ignite.handlers import ModelCheckpoint
 from ignite.metrics import Accuracy, Loss, MetricsLambda, RunningAverage
 from ignite.contrib.handlers import ProgressBar, PiecewiseLinear
 from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, OutputHandler, OptimizerParamsHandler
-from pytorch_pretrained_bert import (OpenAIAdam, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
+# Migration Notes: pytorch_pretrained_bert -> pytorch_transformers. Also, there is no OpenAIAdam. OpenAIAdam -> AdamW
+from pytorch_transformers import (AdamW, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
                                      GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
 
 from utils import get_dataset
 
-SPECIAL_TOKENS = ["<bos>", "<eos>", "<speaker1>", "<speaker2>", "<pad>"]
+# SPECIAL_TOKENS = ["<bos>", "<eos>", "<speaker1>", "<speaker2>", "<pad>"]
+# Migration notes: needs to be changed to dictionary for adding special tokens
+SPECIAL_TOKENS = {"bos_token": "<bos>", 
+                  "eos_token": "<eos>",
+                  "speaker1_token": "<speaker1>", 
+                  "speaker2_token": "<speaker2>",
+                  "pad_token": "<pad>"}
 MODEL_INPUTS = ["input_ids", "mc_token_ids", "lm_labels", "mc_labels", "token_type_ids"]
 PADDED_INPUTS = ["input_ids", "lm_labels", "token_type_ids"]
 
@@ -37,7 +44,7 @@ def average_distributed_scalar(scalar, args):
 
 
 def pad_dataset(dataset, padding=0):
-    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
+    """ Pad the dataset. This could be optimized by defining a Dataset class and pad only batches but this is simpler. """
     max_l = max(len(x) for x in dataset["input_ids"])
     for name in PADDED_INPUTS:
         dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
@@ -46,7 +53,7 @@ def pad_dataset(dataset, padding=0):
 
 def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=False, with_eos=True):
     """ Build a sequence of input from 3 segments: persona, history and last reply """
-    bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
+    bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(list(SPECIAL_TOKENS.values())[:-1])
 
     instance = {}
     sequence = [[bos] + list(chain(*persona))] + history + [reply + ([eos] if with_eos else [])]
@@ -88,7 +95,7 @@ def get_data_loaders(args, tokenizer):
     logger.info("Pad inputs and convert to Tensor")
     tensor_datasets = {"train": [], "valid": []}
     for dataset_name, dataset in datasets.items():
-        dataset = pad_dataset(dataset, padding=tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[-1]))
+        dataset = pad_dataset(dataset, padding=tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS["pad_token"]))
         for input_name in MODEL_INPUTS:
             tensor = torch.tensor(dataset[input_name])
             if input_name != "mc_labels":
@@ -146,10 +153,14 @@ def train():
     tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
     model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
     model = model_class.from_pretrained(args.model_checkpoint)
-    tokenizer.set_special_tokens(SPECIAL_TOKENS)
-    model.set_num_special_tokens(len(SPECIAL_TOKENS))
+    num_added_token = tokenizer.add_special_tokens(SPECIAL_TOKENS)
+    print("Number of added tokens: ", num_added_token)
+    print("Special tokens: ", tokenizer.all_special_tokens)
+    model.resize_token_embeddings(len(tokenizer))
     model.to(args.device)
-    optimizer = OpenAIAdam(model.parameters(), lr=args.lr)
+    # Migration notes: replace with AdamW
+    optimizer = AdamW(model.parameters(), lr=args.lr)
+    # optimizer = OpenAIAdam(model.parameters(), lr=args.lr)
 
     # Prepare model for FP16 and distributed training if needed (order is important, distributed should be the last)
     if args.fp16:
@@ -165,7 +176,11 @@ def train():
     def update(engine, batch):
         model.train()
         batch = tuple(input_tensor.to(args.device) for input_tensor in batch)
-        lm_loss, mc_loss = model(*batch)
+        
+        # Migration notes: the models now return not only the loss but also the logits. The exact return values for each model is specified in the docs. 
+        # lm_loss, mc_loss = model(*batch)
+        lm_loss, mc_loss, lm_logits, mc_logits = model(*batch)
+
         loss = (lm_loss * args.lm_coef + mc_loss * args.mc_coef) / args.gradient_accumulation_steps
         if args.fp16:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -231,12 +246,13 @@ def train():
         tb_logger.attach(trainer, log_handler=OptimizerParamsHandler(optimizer), event_name=Events.ITERATION_STARTED)
         tb_logger.attach(evaluator, log_handler=OutputHandler(tag="validation", metric_names=list(metrics.keys()), another_engine=trainer), event_name=Events.EPOCH_COMPLETED)
 
-        checkpoint_handler = ModelCheckpoint(tb_logger.writer.log_dir, 'checkpoint', save_interval=1, n_saved=3)
+        # tb_logger.writer.log_dir -> tb_logger.writer.logdir (this is the correct attribute name as seen in: https://tensorboardx.readthedocs.io/en/latest/_modules/tensorboardX/writer.html#SummaryWriter)
+        checkpoint_handler = ModelCheckpoint(tb_logger.writer.logdir, 'checkpoint', save_interval=1, n_saved=3)
         trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpoint_handler, {'mymodel': getattr(model, 'module', model)})  # "getattr" take care of distributed encapsulation
 
-        torch.save(args, tb_logger.writer.log_dir + '/model_training_args.bin')
-        getattr(model, 'module', model).config.to_json_file(os.path.join(tb_logger.writer.log_dir, CONFIG_NAME))
-        tokenizer.save_vocabulary(tb_logger.writer.log_dir)
+        torch.save(args, tb_logger.writer.logdir + '/model_training_args.bin')
+        getattr(model, 'module', model).config.to_json_file(os.path.join(tb_logger.writer.logdir, CONFIG_NAME))
+        tokenizer.save_vocabulary(tb_logger.writer.logdir)
 
     # Run the training
     trainer.run(train_loader, max_epochs=args.n_epochs)
