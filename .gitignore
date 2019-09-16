@@ -1,4 +1,6 @@
 .vscode
+huggingface_pretrained/*
+pretrained_model/*
 *.sh
 experiments/
 data/

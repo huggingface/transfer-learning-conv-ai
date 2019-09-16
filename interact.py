@@ -7,7 +7,7 @@ import random
 from argparse import ArgumentParser
 from itertools import chain
 from pprint import pformat
-
+import os
 import torch
 import torch.nn.functional as F
 
@@ -70,7 +70,11 @@ def sample_sequence(personality, history, tokenizer, model, args, current_output
 
         if "gpt2" == args.model:
             logits = logits[0]
-        logits = logits[0, -1, :] / args.temperature
+
+        # logits = logits[0, -1, :] / args.temperature
+        # migration notes: logits is a single value tuple. logits -> logits[0]
+        logits = logits[0][0, -1, :] / args.temperature
+
         logits = top_filtering(logits, top_k=args.top_k, top_p=args.top_p)
         probs = F.softmax(logits, dim=-1)
 
@@ -108,7 +112,11 @@ def run():
     logger.info(pformat(args))
 
     if args.model_checkpoint == "":
-        args.model_checkpoint = download_pretrained_model()
+        if os.path.isdir("./huggingface_pretrained/"): 
+            args.model_checkpoint = "./huggingface_pretrained/"
+            logger.info("Loading from pre-downloaded temp path: {}".format(args.model_checkpoint))
+        else: 
+            args.model_checkpoint = download_pretrained_model()
 
     random.seed(args.seed)
     torch.random.manual_seed(args.seed)
