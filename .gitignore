@@ -1,4 +1,5 @@
 .vscode
+.ipynb_checkpoints/*
 *.sh
 experiments/
 data/
@@ -6,3 +7,4 @@ dataset_cache*
 runs/
 ParlAI/
 __pycache__
+*.json
