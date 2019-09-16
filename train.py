@@ -20,7 +20,7 @@ from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, Output
 from pytorch_transformers import (AdamW, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
                                      GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
 
-from utils import get_dataset
+from utils import get_dataset, get_yesand_dataset
 
 # SPECIAL_TOKENS = ["<bos>", "<eos>", "<speaker1>", "<speaker2>", "<pad>"]
 # Migration notes: needs to be changed to dictionary for adding special tokens
@@ -30,7 +30,7 @@ SPECIAL_TOKENS = {"bos_token": "<bos>",
                   "speaker2_token": "<speaker2>",
                   "pad_token": "<pad>"}
 MODEL_INPUTS = ["input_ids", "mc_token_ids", "lm_labels", "mc_labels", "token_type_ids"]
-PADDED_INPUTS = ["input_ids", "lm_labels", "token_type_ids"]
+PADDED_INPUTS = ["input_ids", "lm_labels", "token_type_ids"] 
 
 logger = logging.getLogger(__file__)
 
@@ -68,13 +68,15 @@ def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=Fals
     return instance, sequence
 
 
+# modified original train.py to use yesand_data
 def get_data_loaders(args, tokenizer):
     """ Prepare the dataset for training and evaluation """
-    personachat = get_dataset(tokenizer, args.dataset_path, args.dataset_cache)
+    # to revert to original, only need to change this to get_dataset
+    yesand_data = get_yesand_dataset(tokenizer, args.dataset_path, args.dataset_cache)
 
     logger.info("Build inputs and labels")
     datasets = {"train": defaultdict(list), "valid": defaultdict(list)}
-    for dataset_name, dataset in personachat.items():
+    for dataset_name, dataset in yesand_data.items():
         num_candidates = len(dataset[0]["utterances"][0]["candidates"])
         if args.num_candidates > 0 and dataset_name == 'train':
             num_candidates = min(args.num_candidates, num_candidates)
@@ -90,7 +92,8 @@ def get_data_loaders(args, tokenizer):
                             datasets[dataset_name][input_name].append(input_array)
                     datasets[dataset_name]["mc_labels"].append(num_candidates - 1)
                     datasets[dataset_name]["n_candidates"] = num_candidates
-                persona = [persona[-1]] + persona[:-1]  # permuted personalities
+                # there's no persona given for yesand data 
+                # persona = [persona[-1]] + persona[:-1]  # permuted personalities
 
     logger.info("Pad inputs and convert to Tensor")
     tensor_datasets = {"train": [], "valid": []}
@@ -116,7 +119,8 @@ def get_data_loaders(args, tokenizer):
 
 def train():
     parser = ArgumentParser()
-    parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
+    # Changed default dataset_path to the yes-and-data path 
+    parser.add_argument("--dataset_path", type=str, default="../../yes-and-data.json", help="Path or url of the dataset. If empty download from S3.")
     parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
     parser.add_argument("--model_checkpoint", type=str, default="openai-gpt", help="Path, url or short name of the model")
     parser.add_argument("--num_candidates", type=int, default=2, help="Number of candidates for training")
