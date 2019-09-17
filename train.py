@@ -7,6 +7,7 @@ from pprint import pformat
 from argparse import ArgumentParser
 from collections import defaultdict
 from itertools import chain
+import json
 
 import torch
 from torch.nn.parallel import DistributedDataParallel
@@ -72,8 +73,11 @@ def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=Fals
 def get_data_loaders(args, tokenizer):
     """ Prepare the dataset for training and evaluation """
     # to revert to original, only need to change this to get_dataset
-    yesand_data = get_yesand_dataset(tokenizer, args.dataset_path, args.dataset_cache)
-
+    if args.yesand: 
+        yesand_data = get_yesand_dataset(tokenizer, args.dataset_path, args.dataset_cache)
+    else:
+        yesand_data = get_dataset(tokenizer, args.dataset_path, args.dataset_cache)
+    
     logger.info("Build inputs and labels")
     datasets = {"train": defaultdict(list), "valid": defaultdict(list)}
     for dataset_name, dataset in yesand_data.items():
@@ -119,8 +123,8 @@ def get_data_loaders(args, tokenizer):
 
 def train():
     parser = ArgumentParser()
-    # Changed default dataset_path to the yes-and-data path 
-    parser.add_argument("--dataset_path", type=str, default="../../yes-and-data.json", help="Path or url of the dataset. If empty download from S3.")
+    
+    parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
     parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
     parser.add_argument("--model_checkpoint", type=str, default="openai-gpt", help="Path, url or short name of the model")
     parser.add_argument("--num_candidates", type=int, default=2, help="Number of candidates for training")
@@ -138,12 +142,18 @@ def train():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
     parser.add_argument("--fp16", type=str, default="", help="Set to O0, O1, O2 or O3 for fp16 training (see apex documentation)")
     parser.add_argument("--local_rank", type=int, default=-1, help="Local rank for distributed training (-1: not distributed)")
+    # add option to finetune with yesand dataset 
+    parser.add_argument("--yesand", type=bool, default=False, help="Finetune with yesand data if True")
     args = parser.parse_args()
 
     # logging is set to INFO (resp. WARN) for main (resp. auxiliary) process. logger.info => log main process only, logger.warning => log all processes
     logging.basicConfig(level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
     logger.warning("Running process %d", args.local_rank)  # This is a logger.warning: it will be printed by all distributed processes
     logger.info("Arguments: %s", pformat(args))
+
+    # if training with yesand, change datapath: 
+    if args.yesand: 
+        args.dataset_path = "../../yes-and-data.json" 
 
     # Initialize distributed training if needed
     args.distributed = (args.local_rank != -1)
@@ -157,10 +167,14 @@ def train():
     tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
     model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
     model = model_class.from_pretrained(args.model_checkpoint)
-    num_added_token = tokenizer.add_special_tokens(SPECIAL_TOKENS)
-    print("Number of added tokens: ", num_added_token)
-    print("Special tokens: ", tokenizer.all_special_tokens)
-    model.resize_token_embeddings(len(tokenizer))
+
+    # if finetuning with yesand data, the special tokens are already part of the vocab. 
+    if not args.yesand: 
+        num_added_token = tokenizer.add_special_tokens(SPECIAL_TOKENS)
+        logger.info("Number of added tokens: {}".format(num_added_token))
+        logger.info("Special tokens: {}".format(tokenizer.all_special_tokens))
+        model.resize_token_embeddings(len(tokenizer))
+
     model.to(args.device)
     # Migration notes: replace with AdamW
     optimizer = AdamW(model.parameters(), lr=args.lr)
@@ -257,13 +271,16 @@ def train():
         torch.save(args, tb_logger.writer.logdir + '/model_training_args.bin')
         getattr(model, 'module', model).config.to_json_file(os.path.join(tb_logger.writer.logdir, CONFIG_NAME))
         tokenizer.save_vocabulary(tb_logger.writer.logdir)
+        with open(os.path.join(tb_logger.writer.logdir, 'special_tokens_map.json'), 'w') as f: 
+            json.dump(obj=SPECIAL_TOKENS, fp=f)
+
 
     # Run the training
     trainer.run(train_loader, max_epochs=args.n_epochs)
 
     # On the main process: close tensorboard logger and rename the last checkpoint (for easy re-loading with OpenAIGPTModel.from_pretrained method)
     if args.local_rank in [-1, 0] and args.n_epochs > 0:
-        os.rename(checkpoint_handler._saved[-1][1][-1], os.path.join(tb_logger.writer.log_dir, WEIGHTS_NAME))  # TODO: PR in ignite to have better access to saved file paths (cleaner)
+        os.rename(checkpoint_handler._saved[-1][1][-1], os.path.join(tb_logger.writer.logdir, WEIGHTS_NAME))  # TODO: PR in ignite to have better access to saved file paths (cleaner)
         tb_logger.close()
 
 if __name__ == "__main__":

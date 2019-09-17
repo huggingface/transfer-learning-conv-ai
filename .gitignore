@@ -1,6 +1,9 @@
 .vscode
+finetuned_yesand/*
+sh_scripts/
+*.out
 .ipynb_checkpoints/*
-huggingface_pretrained/*
+huggingface_s3/*
 pretrained_model/*
 *.sh
 experiments/

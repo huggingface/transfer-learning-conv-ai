@@ -112,8 +112,8 @@ def run():
     logger.info(pformat(args))
 
     if args.model_checkpoint == "":
-        if os.path.isdir("./huggingface_pretrained/"): 
-            args.model_checkpoint = "./huggingface_pretrained/"
+        if os.path.isdir("./huggingface_s3/"): 
+            args.model_checkpoint = "./huggingface_s3/"
             logger.info("Loading from pre-downloaded temp path: {}".format(args.model_checkpoint))
         else: 
             args.model_checkpoint = download_pretrained_model()
@@ -127,14 +127,18 @@ def run():
     tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
     model_class = GPT2LMHeadModel if "gpt2" == args.model else OpenAIGPTLMHeadModel
     model = model_class.from_pretrained(args.model_checkpoint)
+    # model.resize_token_embeddings(len(tokenizer))
+    # import pdb; pdb.set_trace()
 
     model.to(args.device)
     model.eval()
 
-    logger.info("Sample a personality")
-    personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
-    personality = random.choice(personalities)
-    logger.info("Selected personality: %s", tokenizer.decode(chain(*personality)))
+    # logger.info("Sample a personality")
+    # personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
+    # personality = random.choice(personalities)
+    # logger.info("Selected personality: %s", tokenizer.decode(chain(*personality)))
+
+    personality = ""
 
     history = []
     while True:
@@ -143,6 +147,7 @@ def run():
             print('Prompt should not be empty!')
             raw_text = input(">>> ")
         history.append(tokenizer.encode(raw_text))
+
         with torch.no_grad():
             out_ids = sample_sequence(personality, history, tokenizer, model, args)
         history.append(out_ids)
