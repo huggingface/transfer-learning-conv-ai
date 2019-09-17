@@ -21,7 +21,7 @@ from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, Output
 from pytorch_transformers import (AdamW, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
                                      GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
 
-from utils import get_dataset, get_yesand_dataset
+from utils import get_dataset, get_custom_dataset, CUSTOM_DATAPATH
 
 # SPECIAL_TOKENS = ["<bos>", "<eos>", "<speaker1>", "<speaker2>", "<pad>"]
 # Migration notes: needs to be changed to dictionary for adding special tokens
@@ -69,18 +69,18 @@ def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=Fals
     return instance, sequence
 
 
-# modified original train.py to use yesand_data
+# modified original train.py to use custom data 
 def get_data_loaders(args, tokenizer):
     """ Prepare the dataset for training and evaluation """
     # to revert to original, only need to change this to get_dataset
-    if args.yesand: 
-        yesand_data = get_yesand_dataset(tokenizer, args.dataset_path, args.dataset_cache)
+    if args.custom: 
+        custom = get_custom_dataset(tokenizer, args.dataset_path, args.dataset_cache)
     else:
-        yesand_data = get_dataset(tokenizer, args.dataset_path, args.dataset_cache)
+        custom = get_dataset(tokenizer, args.dataset_path, args.dataset_cache)
     
     logger.info("Build inputs and labels")
     datasets = {"train": defaultdict(list), "valid": defaultdict(list)}
-    for dataset_name, dataset in yesand_data.items():
+    for dataset_name, dataset in custom.items():
         num_candidates = len(dataset[0]["utterances"][0]["candidates"])
         if args.num_candidates > 0 and dataset_name == 'train':
             num_candidates = min(args.num_candidates, num_candidates)
@@ -143,7 +143,7 @@ def train():
     parser.add_argument("--fp16", type=str, default="", help="Set to O0, O1, O2 or O3 for fp16 training (see apex documentation)")
     parser.add_argument("--local_rank", type=int, default=-1, help="Local rank for distributed training (-1: not distributed)")
     # add option to finetune with yesand dataset 
-    parser.add_argument("--yesand", type=bool, default=False, help="Finetune with yesand data if True")
+    parser.add_argument("--custom", type=bool, default=False, help="Finetune with custom data if True")
     args = parser.parse_args()
 
     # logging is set to INFO (resp. WARN) for main (resp. auxiliary) process. logger.info => log main process only, logger.warning => log all processes
@@ -152,8 +152,8 @@ def train():
     logger.info("Arguments: %s", pformat(args))
 
     # if training with yesand, change datapath: 
-    if args.yesand: 
-        args.dataset_path = "../../yes-and-data.json" 
+    if args.custom: 
+        args.dataset_path = CUSTOM_DATAPATH 
 
     # Initialize distributed training if needed
     args.distributed = (args.local_rank != -1)
@@ -168,8 +168,8 @@ def train():
     model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
     model = model_class.from_pretrained(args.model_checkpoint)
 
-    # if finetuning with yesand data, the special tokens are already part of the vocab. 
-    if not args.yesand: 
+    # if finetuning with custom data, the special tokens are already part of the vocab in the pretrained model. 
+    if not args.custom: 
         num_added_token = tokenizer.add_special_tokens(SPECIAL_TOKENS)
         logger.info("Number of added tokens: {}".format(num_added_token))
         logger.info("Special tokens: {}".format(tokenizer.all_special_tokens))
