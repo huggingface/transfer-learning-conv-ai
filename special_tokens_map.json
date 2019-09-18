@@ -1,0 +1,4 @@
+{"bos_token": "<bos>", 
+    "eos_token": "<eos>",
+    "additional_special_tokens": ["<speaker1>", "<speaker2>"],
+    "pad_token": "<pad>"}

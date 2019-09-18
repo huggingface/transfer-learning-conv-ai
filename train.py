@@ -27,8 +27,7 @@ from utils import get_dataset, get_custom_dataset, CUSTOM_DATAPATH
 # Migration notes: needs to be changed to dictionary for adding special tokens
 SPECIAL_TOKENS = {"bos_token": "<bos>", 
                   "eos_token": "<eos>",
-                  "speaker1_token": "<speaker1>", 
-                  "speaker2_token": "<speaker2>",
+                  "additional_special_tokens": ["<speaker1>", "<speaker2>"],
                   "pad_token": "<pad>"}
 MODEL_INPUTS = ["input_ids", "mc_token_ids", "lm_labels", "mc_labels", "token_type_ids"]
 PADDED_INPUTS = ["input_ids", "lm_labels", "token_type_ids"] 
@@ -54,7 +53,9 @@ def pad_dataset(dataset, padding=0):
 
 def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=False, with_eos=True):
     """ Build a sequence of input from 3 segments: persona, history and last reply """
-    bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(list(SPECIAL_TOKENS.values())[:-1])
+
+    special_tokens = {'<bos>', '<eos>', '<speaker1>', '<speaker2>'}
+    bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(special_tokens) 
 
     instance = {}
     sequence = [[bos] + list(chain(*persona))] + history + [reply + ([eos] if with_eos else [])]

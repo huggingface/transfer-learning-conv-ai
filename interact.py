@@ -56,7 +56,9 @@ def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_va
 
 
 def sample_sequence(personality, history, tokenizer, model, args, current_output=None):
-    special_tokens_ids = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
+
+    special_tokens = {'<bos>', '<eos>', '<speaker1>', '<speaker2>'}
+    special_tokens_ids = tokenizer.convert_tokens_to_ids(special_tokens)
     if current_output is None:
         current_output = []
 
@@ -97,7 +99,6 @@ def run():
     parser.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model")
     parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
-
     parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
     parser.add_argument("--max_length", type=int, default=20, help="Maximum length of the output utterances")
     parser.add_argument("--min_length", type=int, default=1, help="Minimum length of the output utterances")
@@ -105,6 +106,8 @@ def run():
     parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
     parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
     parser.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
+    # add option to not use personality
+    parser.add_argument("--no_personality", action='store_true', help="Set to not sample a personality.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
@@ -133,12 +136,15 @@ def run():
     model.to(args.device)
     model.eval()
 
-    # logger.info("Sample a personality")
-    # personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
-    # personality = random.choice(personalities)
-    # logger.info("Selected personality: %s", tokenizer.decode(chain(*personality)))
-
-    personality = ""
+    # added the option to opt out of using a personality 
+    if args.no_personality: 
+        logger.info("No personality is sampled for this chatbot.")
+        personality = ""
+    else:
+        logger.info("Sample a personality")
+        personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
+        personality = random.choice(personalities)
+        logger.info("Selected personality: %s", tokenizer.decode(chain(*personality)))
 
     history = []
     while True:
