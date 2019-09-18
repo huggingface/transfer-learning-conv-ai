@@ -1,4 +1,5 @@
 .vscode
+trained_from_scratch_convai/*
 finetuned_yesand/*
 sh_scripts/
 *.out
