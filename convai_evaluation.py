@@ -17,7 +17,7 @@ from projects.convai2.eval_hits import eval_hits, setup_args as setup_args_hits
 from projects.convai2.eval_f1 import eval_f1, setup_args as setup_args_f1
 from projects.convai2.eval_ppl import eval_ppl, setup_args as setup_args_ppl
 from projects.convai2.build_dict import build_dict
-from pytorch_pretrained_bert import OpenAIGPTDoubleHeadsModel, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
+from pytorch_transformers import OpenAIGPTDoubleHeadsModel, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
 
 from train import build_input_from_segments, pad_dataset, SPECIAL_TOKENS
 from utils import download_pretrained_model, AttrDict
@@ -64,7 +64,6 @@ class TransformerAgent(Agent):
             else:
                 self.model_checkpoint = OpenAIGPTLMHeadModel.from_pretrained(args.model_checkpoint)
             self.model_checkpoint.to(args.device)
-            self.model_checkpoint.eval()
 
             self.logger.info("Build BPE prefix dictionary")
             convai_dict = build_dict()

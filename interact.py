@@ -11,7 +11,7 @@ from pprint import pformat
 import torch
 import torch.nn.functional as F
 
-from pytorch_pretrained_bert import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
+from pytorch_transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
 from train import SPECIAL_TOKENS, build_input_from_segments
 from utils import get_dataset_personalities, download_pretrained_model
 
@@ -60,14 +60,13 @@ def sample_sequence(personality, history, tokenizer, model, args, current_output
         current_output = []
 
     for i in range(args.max_length):
-        instance, sequence = build_input_from_segments(personality, history, current_output, tokenizer, with_eos=False)
+        instance, _ = build_input_from_segments(personality, history, current_output, tokenizer, with_eos=False)
 
         input_ids = torch.tensor(instance["input_ids"], device=args.device).unsqueeze(0)
         token_type_ids = torch.tensor(instance["token_type_ids"], device=args.device).unsqueeze(0)
 
-        logits = model(input_ids, token_type_ids=token_type_ids)
-
-        if "gpt2" == args.model:
+        logits, = model(input_ids, token_type_ids=token_type_ids)
+        if isinstance(logits, tuple):  # for gpt2 and maybe others
             logits = logits[0]
         logits = logits[0, -1, :] / args.temperature
         logits = top_filtering(logits, top_k=args.top_k, top_p=args.top_p)
@@ -118,9 +117,7 @@ def run():
     tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
     model_class = GPT2LMHeadModel if "gpt2" == args.model else OpenAIGPTLMHeadModel
     model = model_class.from_pretrained(args.model_checkpoint)
-
     model.to(args.device)
-    model.eval()
 
     logger.info("Sample a personality")
     personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
