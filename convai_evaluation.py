@@ -27,7 +27,7 @@ class TransformerAgent(Agent):
     @staticmethod
     def add_cmdline_args(argparser):
         agent_args = argparser.add_argument_group('Agent parameters')
-        agent_args.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model")
+        agent_args.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model. Must be OpenAIGPT.")
         agent_args.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
         agent_args.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
         agent_args.add_argument("--eval_type", type=str, default="hits@1", help="hits@1, ppl or f1")
