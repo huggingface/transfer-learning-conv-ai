@@ -1,5 +1,5 @@
 torch
 pytorch-ignite
 pytorch-transformers>=1.2
-git+https://github.com/lanpa/tensorboardX
+tensorboardX==1.8
 tensorflow  # for tensorboardX
