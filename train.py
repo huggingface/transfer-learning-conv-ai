@@ -46,6 +46,15 @@ def pad_dataset(dataset, padding=0):
     return dataset
 
 
+def add_special_tokens_(model, tokenizer):
+    """ Add special tokens to the tokenizer and the model if they have not already been added. """
+    orig_num_tokens = len(tokenizer.encoder)
+    num_added_tokens = tokenizer.add_special_tokens(
+        ATTR_TO_SPECIAL_TOKEN)  # returns 0 and doesn't add if they are already there
+    if num_added_tokens > 0:
+        model.resize_token_embeddings(
+            new_num_tokens=orig_num_tokens + num_added_tokens)
+
 def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=False, with_eos=True):
     """ Build a sequence of input from 3 segments: persona, history and last reply. """
     bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
@@ -152,10 +161,7 @@ def train():
     model = model_class.from_pretrained(args.model_checkpoint)
     model.to(args.device)
     # Add special tokens if they are not already added
-    orig_num_tokens = len(tokenizer.encoder)
-    num_added_tokens = tokenizer.add_special_tokens(ATTR_TO_SPECIAL_TOKEN)  # returns 0 and doesn't add if they are already loaded
-    if num_added_tokens > 0:
-        model.resize_token_embeddings(new_num_tokens=orig_num_tokens + num_added_tokens) # use vocab_size after PR
+    add_special_tokens_(model, tokenizer)
     optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=True)
 
     # Prepare model for FP16 and distributed training if needed (order is important, distributed should be the last)
@@ -259,6 +265,8 @@ def train():
     if args.local_rank in [-1, 0] and args.n_epochs > 0:
         os.rename(checkpoint_handler._saved[-1][1][-1], os.path.join(log_dir, WEIGHTS_NAME))  # TODO: PR in ignite to have better access to saved file paths (cleaner)
         tb_logger.close()
+
+
 
 if __name__ == "__main__":
     train()

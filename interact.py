@@ -12,7 +12,7 @@ import torch
 import torch.nn.functional as F
 
 from pytorch_transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
-from train import SPECIAL_TOKENS, build_input_from_segments
+from train import SPECIAL_TOKENS, build_input_from_segments, add_special_tokens_
 from utils import get_dataset_personalities, download_pretrained_model
 
 def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_value=-float('Inf')):
@@ -76,6 +76,7 @@ def sample_sequence(personality, history, tokenizer, model, args, current_output
         if i < args.min_length and prev.item() in special_tokens_ids:
             while prev.item() in special_tokens_ids:
                 prev = torch.multinomial(probs, num_samples=1)
+                if probs.max().item() == 1: break
 
         if prev.item() in special_tokens_ids:
             break
@@ -118,6 +119,7 @@ def run():
     model_class = GPT2LMHeadModel if "gpt2" == args.model else OpenAIGPTLMHeadModel
     model = model_class.from_pretrained(args.model_checkpoint)
     model.to(args.device)
+    add_special_tokens_(model, tokenizer)
 
     logger.info("Sample a personality")
     personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
