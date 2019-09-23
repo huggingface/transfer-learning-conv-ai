@@ -9,7 +9,6 @@ import tarfile
 import tempfile
 import socket
 
-
 import torch
 
 from pytorch_transformers import cached_path

@@ -267,7 +267,5 @@ def train():
         os.rename(checkpoint_handler._saved[-1][1][-1], os.path.join(log_dir, WEIGHTS_NAME))  # TODO: PR in ignite to have better access to saved file paths (cleaner)
         tb_logger.close()
 
-
-
 if __name__ == "__main__":
     train()
