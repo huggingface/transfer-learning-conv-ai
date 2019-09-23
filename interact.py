@@ -7,6 +7,7 @@ import random
 from argparse import ArgumentParser
 from itertools import chain
 from pprint import pformat
+import warnings
 
 import torch
 import torch.nn.functional as F
@@ -75,8 +76,10 @@ def sample_sequence(personality, history, tokenizer, model, args, current_output
         prev = torch.topk(probs, 1)[1] if args.no_sample else torch.multinomial(probs, 1)
         if i < args.min_length and prev.item() in special_tokens_ids:
             while prev.item() in special_tokens_ids:
+                if probs.max().item() == 1:
+                    warnings.warn("Warning: model generating special token with probability 1.")
+                    break  # avoid infinitely looping over special token
                 prev = torch.multinomial(probs, num_samples=1)
-                if probs.max().item() == 1: break
 
         if prev.item() in special_tokens_ids:
             break
