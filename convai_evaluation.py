@@ -17,9 +17,10 @@ from projects.convai2.eval_hits import eval_hits, setup_args as setup_args_hits
 from projects.convai2.eval_f1 import eval_f1, setup_args as setup_args_f1
 from projects.convai2.eval_ppl import eval_ppl, setup_args as setup_args_ppl
 from projects.convai2.build_dict import build_dict
-from pytorch_transformers import OpenAIGPTDoubleHeadsModel, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer
+from pytorch_transformers import (OpenAIGPTDoubleHeadsModel, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer,
+                                  GPT2DoubleHeadsModel, GPT2LMHeadModel, GPT2Tokenizer)
 
-from train import build_input_from_segments, pad_dataset, SPECIAL_TOKENS
+from train import build_input_from_segments, pad_dataset, SPECIAL_TOKENS, add_special_tokens_
 from utils import download_pretrained_model, AttrDict
 from interact import sample_sequence
 
@@ -57,12 +58,14 @@ class TransformerAgent(Agent):
             self.logger.info("Get pretrained model and tokenizer")
             if args.model_checkpoint == "":
                 args.model_checkpoint = download_pretrained_model()
-
-            self.tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model_checkpoint)
-            if self.args.eval_type == "hits@1":
-                self.model_checkpoint = OpenAIGPTDoubleHeadsModel.from_pretrained(args.model_checkpoint)
+            if 'gpt2' in args.model_checkpoint:
+                self.tokenizer = GPT2Tokenizer.from_pretrained(args.model_checkpoint)
+                model_class = GPT2DoubleHeadsModel if self.args.eval_type == "hits@1" else GPT2LMHeadModel
             else:
-                self.model_checkpoint = OpenAIGPTLMHeadModel.from_pretrained(args.model_checkpoint)
+                self.tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model_checkpoint)
+                model_class = OpenAIGPTDoubleHeadsModel if self.args.eval_type == "hits@1" else OpenAIGPTLMHeadModel
+
+            self.model_checkpoint = model_class.from_pretrained(args.model_checkpoint)
             self.model_checkpoint.to(args.device)
 
             self.logger.info("Build BPE prefix dictionary")
@@ -73,7 +76,7 @@ class TransformerAgent(Agent):
             self.model_checkpoint = shared['model']
             self.tokenizer = shared['tokenizer']
             self.prefix2words = shared['prefix2words']
-
+        add_special_tokens_(self.model_checkpoint, self.tokenizer)
         self.special_tokens_ids = self.tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
 
         self.persona = []
@@ -135,7 +138,7 @@ class TransformerAgent(Agent):
                 tensor_inputs[input_name] = tensor
 
             with torch.no_grad():
-                _, mc_logits = self.model_checkpoint(**tensor_inputs)
+                mc_logits = self.model_checkpoint(**tensor_inputs)[1]
 
             val, ind = torch.sort(mc_logits[0], descending=True)
 
