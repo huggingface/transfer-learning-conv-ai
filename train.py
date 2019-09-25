@@ -16,12 +16,14 @@ from ignite.handlers import ModelCheckpoint
 from ignite.metrics import Accuracy, Loss, MetricsLambda, RunningAverage
 from ignite.contrib.handlers import ProgressBar, PiecewiseLinear
 from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, OutputHandler, OptimizerParamsHandler
-from pytorch_pretrained_bert import (OpenAIAdam, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
-                                     GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
+from pytorch_transformers import (AdamW, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
+                                  GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
 
-from utils import get_dataset
+from utils import get_dataset, make_logdir
 
 SPECIAL_TOKENS = ["<bos>", "<eos>", "<speaker1>", "<speaker2>", "<pad>"]
+ATTR_TO_SPECIAL_TOKEN = {'bos_token': '<bos>', 'eos_token': '<eos>', 'pad_token': '<pad>',
+                         'additional_special_tokens': ('<speaker1>', '<speaker2>')}
 MODEL_INPUTS = ["input_ids", "mc_token_ids", "lm_labels", "mc_labels", "token_type_ids"]
 PADDED_INPUTS = ["input_ids", "lm_labels", "token_type_ids"]
 
@@ -37,15 +39,24 @@ def average_distributed_scalar(scalar, args):
 
 
 def pad_dataset(dataset, padding=0):
-    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
+    """ Pad the dataset. This could be optimized by defining a Dataset class and padding at the batch level, but this is simpler. """
     max_l = max(len(x) for x in dataset["input_ids"])
     for name in PADDED_INPUTS:
         dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
     return dataset
 
 
+def add_special_tokens_(model, tokenizer):
+    """ Add special tokens to the tokenizer and the model if they have not already been added. """
+    orig_num_tokens = len(tokenizer.encoder)
+    num_added_tokens = tokenizer.add_special_tokens(
+        ATTR_TO_SPECIAL_TOKEN)  # returns 0 and doesn't add if they are already there
+    if num_added_tokens > 0:
+        model.resize_token_embeddings(
+            new_num_tokens=orig_num_tokens + num_added_tokens)
+
 def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=False, with_eos=True):
-    """ Build a sequence of input from 3 segments: persona, history and last reply """
+    """ Build a sequence of input from 3 segments: persona, history and last reply. """
     bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
 
     instance = {}
@@ -58,7 +69,7 @@ def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=Fals
     instance["lm_labels"] = [-1] * len(instance["input_ids"])
     if lm_labels:
         instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
-    return instance, sequence
+    return instance, sequence  # TODO: second arg is never used, delete it
 
 
 def get_data_loaders(args, tokenizer):
@@ -141,15 +152,17 @@ def train():
         args.device = torch.device("cuda", args.local_rank)
         torch.distributed.init_process_group(backend='nccl', init_method='env://')
 
-    logger.info("Prepare tokenizer, pretrained model and optimizer - add special tokens for fine-tuning")
-    tokenizer_class = GPT2Tokenizer if "gpt2" in args.model_checkpoint else OpenAIGPTTokenizer
+    logger.info("Prepare tokenizer, pretrained model and optimizer.")
+    tokenizer_class = GPT2Tokenizer if "gpt2" in args.model_checkpoint else OpenAIGPTTokenizer # cant use Autotokenizer because checkpoint could be a Path
     tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
+
+
     model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
     model = model_class.from_pretrained(args.model_checkpoint)
-    tokenizer.set_special_tokens(SPECIAL_TOKENS)
-    model.set_num_special_tokens(len(SPECIAL_TOKENS))
     model.to(args.device)
-    optimizer = OpenAIAdam(model.parameters(), lr=args.lr)
+    # Add special tokens if they are not already added
+    add_special_tokens_(model, tokenizer)
+    optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=True)
 
     # Prepare model for FP16 and distributed training if needed (order is important, distributed should be the last)
     if args.fp16:
@@ -165,7 +178,11 @@ def train():
     def update(engine, batch):
         model.train()
         batch = tuple(input_tensor.to(args.device) for input_tensor in batch)
-        lm_loss, mc_loss = model(*batch)
+        input_ids, mc_token_ids, lm_labels, mc_labels, token_type_ids = batch
+        (lm_loss), (mc_loss), *_ = model(
+            input_ids, token_type_ids=token_type_ids, mc_token_ids=mc_token_ids,
+            mc_labels=mc_labels, lm_labels=lm_labels
+        )
         loss = (lm_loss * args.lm_coef + mc_loss * args.mc_coef) / args.gradient_accumulation_steps
         if args.fp16:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -187,8 +204,10 @@ def train():
             batch = tuple(input_tensor.to(args.device) for input_tensor in batch)
             input_ids, mc_token_ids, lm_labels, mc_labels, token_type_ids = batch
             logger.info(tokenizer.decode(input_ids[0, -1, :].tolist()))
-            model_outputs = model(input_ids, mc_token_ids, token_type_ids=token_type_ids)
-            lm_logits, mc_logits = model_outputs[0], model_outputs[1]  # So we can also use GPT2 outputs
+            # if we dont send labels to model, it doesnt return losses
+            lm_logits, mc_logits, *_ = model(
+                input_ids, token_type_ids=token_type_ids, mc_token_ids=mc_token_ids,
+            )
             lm_logits_flat_shifted = lm_logits[..., :-1, :].contiguous().view(-1, lm_logits.size(-1))
             lm_labels_flat_shifted = lm_labels[..., 1:].contiguous().view(-1)
             return (lm_logits_flat_shifted, mc_logits), (lm_labels_flat_shifted, mc_labels)
@@ -210,7 +229,7 @@ def train():
     scheduler = PiecewiseLinear(optimizer, "lr", [(0, args.lr), (args.n_epochs * len(train_loader), 0.0)])
     trainer.add_event_handler(Events.ITERATION_STARTED, scheduler)
 
-    # Prepare metrics - note how we compute distributed metrics 
+    # Prepare metrics - note how we compute distributed metrics
     RunningAverage(output_transform=lambda x: x).attach(trainer, "loss")
     metrics = {"nll": Loss(torch.nn.CrossEntropyLoss(ignore_index=-1), output_transform=lambda x: (x[0][0], x[1][0])),
                "accuracy": Accuracy(output_transform=lambda x: (x[0][1], x[1][1]))}
@@ -226,24 +245,26 @@ def train():
         pbar.attach(trainer, metric_names=["loss"])
         evaluator.add_event_handler(Events.COMPLETED, lambda _: pbar.log_message("Validation: %s" % pformat(evaluator.state.metrics)))
 
-        tb_logger = TensorboardLogger(log_dir=None)
+        log_dir = make_logdir(args.model_checkpoint)
+        tb_logger = TensorboardLogger(log_dir)
+
         tb_logger.attach(trainer, log_handler=OutputHandler(tag="training", metric_names=["loss"]), event_name=Events.ITERATION_COMPLETED)
         tb_logger.attach(trainer, log_handler=OptimizerParamsHandler(optimizer), event_name=Events.ITERATION_STARTED)
         tb_logger.attach(evaluator, log_handler=OutputHandler(tag="validation", metric_names=list(metrics.keys()), another_engine=trainer), event_name=Events.EPOCH_COMPLETED)
 
-        checkpoint_handler = ModelCheckpoint(tb_logger.writer.log_dir, 'checkpoint', save_interval=1, n_saved=3)
-        trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpoint_handler, {'mymodel': getattr(model, 'module', model)})  # "getattr" take care of distributed encapsulation
+        checkpoint_handler = ModelCheckpoint(log_dir, 'checkpoint', save_interval=1, n_saved=3)
+        trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpoint_handler, {'mymodel': getattr(model, 'module', model)})  # "getattr" takes care of distributed encapsulation
 
-        torch.save(args, tb_logger.writer.log_dir + '/model_training_args.bin')
-        getattr(model, 'module', model).config.to_json_file(os.path.join(tb_logger.writer.log_dir, CONFIG_NAME))
-        tokenizer.save_vocabulary(tb_logger.writer.log_dir)
+        torch.save(args, log_dir + '/model_training_args.bin')
+        getattr(model, 'module', model).config.to_json_file(os.path.join(log_dir, CONFIG_NAME))
+        tokenizer.save_pretrained(log_dir)
 
     # Run the training
     trainer.run(train_loader, max_epochs=args.n_epochs)
 
     # On the main process: close tensorboard logger and rename the last checkpoint (for easy re-loading with OpenAIGPTModel.from_pretrained method)
     if args.local_rank in [-1, 0] and args.n_epochs > 0:
-        os.rename(checkpoint_handler._saved[-1][1][-1], os.path.join(tb_logger.writer.log_dir, WEIGHTS_NAME))  # TODO: PR in ignite to have better access to saved file paths (cleaner)
+        os.rename(checkpoint_handler._saved[-1][1][-1], os.path.join(log_dir, WEIGHTS_NAME))  # TODO: PR in ignite to have better access to saved file paths (cleaner)
         tb_logger.close()
 
 if __name__ == "__main__":

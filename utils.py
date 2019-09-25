@@ -1,15 +1,17 @@
 # Copyright (c) 2019-present, HuggingFace Inc.
 # All rights reserved. This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
+from datetime import datetime
 import json
 import logging
 import os
 import tarfile
 import tempfile
+import socket
 
 import torch
 
-from pytorch_pretrained_bert import cached_path
+from pytorch_transformers import cached_path
 
 PERSONACHAT_URL = "https://s3.amazonaws.com/datasets.huggingface.co/personachat/personachat_self_original.json"
 HF_FINETUNED_MODEL = "https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/finetuned_chatbot_gpt.tar.gz"
@@ -88,3 +90,12 @@ class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
         self.__dict__ = self
+
+
+def make_logdir(model_name: str):
+    """Create unique path to save results and checkpoints, e.g. runs/Sep22_19-45-59_gpu-7_gpt2"""
+    # Code copied from ignite repo
+    current_time = datetime.now().strftime('%b%d_%H-%M-%S')
+    logdir = os.path.join(
+        'runs', current_time + '_' + socket.gethostname() + '_' + model_name)
+    return logdir
