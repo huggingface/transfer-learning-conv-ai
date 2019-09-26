@@ -28,7 +28,7 @@ def download_pretrained_model():
     return tempdir
 
 
-def get_dataset(tokenizer, dataset_path, dataset_cache=None):
+def get_dataset(tokenizer, dataset_path, dataset_cache):
     """ Get PERSONACHAT from S3 """
     dataset_path = dataset_path or PERSONACHAT_URL
     dataset_cache = dataset_cache + '_' + type(tokenizer).__name__  # To avoid using GPT cache for GPT-2 and vice-versa
@@ -49,12 +49,13 @@ def get_dataset(tokenizer, dataset_path, dataset_cache=None):
                 return dict((n, tokenize(o)) for n, o in obj.items())
             return list(tokenize(o) for o in obj)
         dataset = tokenize(dataset)
+        torch.save(dataset, dataset_cache)
     return dataset
 
 
-def get_dataset_personalities(tokenizer, dataset_path, dataset_cache=None):
+def get_dataset_personalities(tokenizer, dataset_path, dataset_cache):
     """ Get personalities from PERSONACHAT """
-    dataset = get_dataset(tokenizer, dataset_path, dataset_cache=dataset_cache)
+    dataset = get_dataset(tokenizer, dataset_path, dataset_cache)
     personalities = [dialog["personality"] for dataset in dataset.values() for dialog in dataset]
     logger.info("Gathered {} personalities".format(len(personalities)))
     return personalities
