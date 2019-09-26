@@ -192,9 +192,12 @@ def train():
     logger.info("Prepare tokenizer, pretrained model and optimizer.")
     tokenizer_class = GPT2Tokenizer if "gpt2" in args.model_checkpoint else OpenAIGPTTokenizer # cant use Autotokenizer because checkpoint could be a Path
     tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
+
+
     model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
     model = model_class.from_pretrained(args.model_checkpoint)
     model.to(args.device)
+    # Add special tokens if they are not already added
     add_special_tokens_(model, tokenizer)
     optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=True)
 
@@ -281,6 +284,7 @@ def train():
 
         log_dir = make_logdir(args.model_checkpoint)
         tb_logger = TensorboardLogger(log_dir)
+
         tb_logger.attach(trainer, log_handler=OutputHandler(tag="training", metric_names=["loss"]), event_name=Events.ITERATION_COMPLETED)
         tb_logger.attach(trainer, log_handler=OptimizerParamsHandler(optimizer), event_name=Events.ITERATION_STARTED)
         tb_logger.attach(evaluator, log_handler=OutputHandler(tag="validation", metric_names=list(metrics.keys()), another_engine=trainer), event_name=Events.EPOCH_COMPLETED)
