@@ -16,7 +16,7 @@ from pytorch_transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2L
 from train import SPECIAL_TOKENS, build_input_from_segments, add_special_tokens_
 from utils import get_dataset_personalities, download_pretrained_model
 
-def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_value=-float('Inf')):
+def top_filtering(logits, top_k=0., top_p=0.9, threshold=-float('Inf'), filter_value=-float('Inf')):
     """ Filter a distribution of logits using top-k, top-p (nucleus) and/or threshold filtering
         Args:
             logits: logits distribution shape (vocabulary size)
