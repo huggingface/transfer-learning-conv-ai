@@ -49,7 +49,7 @@ We make a pretrained and fine-tuned model available on our S3 [here](https://s3.
 
 The training script can be used in single GPU or multi GPU settings:
 
-```bash
+```bashqq
 python ./train.py  # Single GPU training
 python -m torch.distributed.launch --nproc_per_node=8 ./train.py  # Training on 8 GPUs
 ```
