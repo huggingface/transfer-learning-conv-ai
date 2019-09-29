@@ -38,6 +38,7 @@ class TransformerAgent(Agent):
         agent_args.add_argument("--seed", type=int, default=0)
         agent_args.add_argument("--temperature", type=int, default=0.7)
         agent_args.add_argument("--top_k", type=int, default=20)
+        agent_args.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
         return argparser
 
     def __init__(self, opt, shared=None):
@@ -150,7 +151,7 @@ class TransformerAgent(Agent):
         else:
             # We are in interactive of f1 evaluation mode => just sample
             with torch.no_grad():
-                out_ids, _ = sample_sequence(self.persona, self.history, self.tokenizer, self.model_checkpoint, self.args)
+                out_ids = sample_sequence(self.persona, self.history, self.tokenizer, self.model_checkpoint, self.args)
             out_text = self.tokenizer.decode(out_ids, skip_special_tokens=True,
                                              clean_up_tokenization_spaces=(self.args.eval_type != 'f1'))
             reply = {'text': out_text}
@@ -171,6 +172,8 @@ class TransformerAgent(Agent):
         with torch.no_grad():
             logits = self.model_checkpoint(input_ids, token_type_ids=token_type_ids)
 
+        if isinstance(logits, tuple):  # for gpt2 and maybe others
+            logits = logits[0]
         probs = F.softmax(logits[0, -1], dim=0)
 
         dist = {}
