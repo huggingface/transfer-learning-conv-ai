@@ -1,7 +1,7 @@
 """
-each entry in personachat is a dict with two keys personality and utterances, the dataset is a list of entries.
+Each entry in personachat is a dict with two keys personality and utterances, the dataset is a list of entries.
 personality:  list of strings containing the personality of the agent
-utterances: list of dictionaries, each of which has two keys:
+utterances: list of dictionaries, each of which has two keys which are lists of strings.
     candidates: [next_utterance_candidate_1, ..., next_utterance_candidate_19]
     history: [dialog_turn_0, ... dialog_turn N], where N is an odd number since the other user starts every conversation.
 Preprocessing:
