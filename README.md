@@ -155,6 +155,9 @@ temperature | `int` | `0.7` | Sampling softmax temperature
 top_k | `int` | `0` | Filter top-k tokens before sampling (`<=0`: no filtering)
 top_p | `float` | `0.9` | Nucleus filtering (top-p) before sampling (`<=0.0`: no filtering)
 
+## Data Format
+see `example_entry.py`, and the comment at the top.
+
 ## Citation
 
 If you use this code in your research, you can cite our NeurIPS CAI workshop [paper](http://arxiv.org/abs/1901.08149):
