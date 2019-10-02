@@ -14,7 +14,7 @@ import torch.nn.functional as F
 
 from pytorch_transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
 from train import SPECIAL_TOKENS, build_input_from_segments, add_special_tokens_
-from utils import get_dataset_personalities, download_pretrained_model
+from utils import get_dataset, download_pretrained_model
 
 def top_filtering(logits, top_k=0., top_p=0.9, threshold=-float('Inf'), filter_value=-float('Inf')):
     """ Filter a distribution of logits using top-k, top-p (nucleus) and/or threshold filtering
@@ -125,7 +125,8 @@ def run():
     add_special_tokens_(model, tokenizer)
 
     logger.info("Sample a personality")
-    personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
+    dataset = get_dataset(tokenizer, args.dataset_path, args.dataset_cache)
+    personalities = [dialog["personality"] for dataset in dataset.values() for dialog in dataset]
     personality = random.choice(personalities)
     logger.info("Selected personality: %s", tokenizer.decode(chain(*personality)))
 
