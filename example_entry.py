@@ -3,6 +3,7 @@ Each entry in personachat is a dict with two keys personality and utterances, th
 personality:  list of strings containing the personality of the agent
 utterances: list of dictionaries, each of which has two keys which are lists of strings.
     candidates: [next_utterance_candidate_1, ..., next_utterance_candidate_19]
+        The last candidate is the ground truth response observed in the conversational data
     history: [dialog_turn_0, ... dialog_turn N], where N is an odd number since the other user starts every conversation.
 Preprocessing:
     - Spaces before periods at end of sentences

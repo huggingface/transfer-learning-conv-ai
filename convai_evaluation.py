@@ -126,7 +126,7 @@ class TransformerAgent(Agent):
         if self.args.eval_type == "hits@1" and len(self.candidates) > 0:
             instances = defaultdict(list)
             for candidate, _ in self.candidates:
-                instance, _ = build_input_from_segments(self.persona, self.history, candidate, self.tokenizer)
+                instance = build_input_from_segments(self.persona, self.history, candidate, self.tokenizer)
                 for input_name, input_array in instance.items():
                     instances[input_name].append(input_array)
 
@@ -163,7 +163,7 @@ class TransformerAgent(Agent):
         partial true output. This is used to calculate the per-word perplexity.
         """
         partial_out_ids = self.tokenizer.encode(' '.join(partial_out))
-        instance, _ = build_input_from_segments(self.persona, self.history, partial_out_ids,
+        instance = build_input_from_segments(self.persona, self.history, partial_out_ids,
                                              self.tokenizer, with_eos=False)
 
         input_ids = torch.tensor(instance["input_ids"], device=self.args.device).unsqueeze(0)

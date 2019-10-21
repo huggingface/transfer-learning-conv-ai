@@ -16,6 +16,7 @@ To install and use the training and inference scripts please clone the repo and 
 git clone https://github.com/huggingface/transfer-learning-conv-ai
 cd transfer-learning-conv-ai
 pip install -r requirements.txt
+python -m spacy download en
 ```
 
 ## Installation with Docker
