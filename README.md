@@ -16,6 +16,7 @@ To install and use the training and inference scripts please clone the repo and 
 git clone https://github.com/huggingface/transfer-learning-conv-ai
 cd transfer-learning-conv-ai
 pip install -r requirements.txt
+python -m spacy download en
 ```
 
 ## Installation with Docker
@@ -154,6 +155,9 @@ seed | `int` | `42` | Seed
 temperature | `int` | `0.7` | Sampling softmax temperature
 top_k | `int` | `0` | Filter top-k tokens before sampling (`<=0`: no filtering)
 top_p | `float` | `0.9` | Nucleus filtering (top-p) before sampling (`<=0.0`: no filtering)
+
+## Data Format
+see `example_entry.py`, and the comment at the top.
 
 ## Citation
 

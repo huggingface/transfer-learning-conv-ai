@@ -50,27 +50,23 @@ def pad_dataset(dataset, padding=0):
 def add_special_tokens_(model, tokenizer):
     """ Add special tokens to the tokenizer and the model if they have not already been added. """
     orig_num_tokens = len(tokenizer.encoder)
-    num_added_tokens = tokenizer.add_special_tokens(
-        ATTR_TO_SPECIAL_TOKEN)  # returns 0 and doesn't add if they are already there
+    num_added_tokens = tokenizer.add_special_tokens(ATTR_TO_SPECIAL_TOKEN) # doesn't add if they are already there
     if num_added_tokens > 0:
-        model.resize_token_embeddings(
-            new_num_tokens=orig_num_tokens + num_added_tokens)
+        model.resize_token_embeddings(new_num_tokens=orig_num_tokens + num_added_tokens)
 
 def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=False, with_eos=True):
     """ Build a sequence of input from 3 segments: persona, history and last reply. """
     bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
-
-    instance = {}
     sequence = [[bos] + list(chain(*persona))] + history + [reply + ([eos] if with_eos else [])]
     sequence = [sequence[0]] + [[speaker2 if (len(sequence)-i) % 2 else speaker1] + s for i, s in enumerate(sequence[1:])]
-
+    instance = {}
     instance["input_ids"] = list(chain(*sequence))
     instance["token_type_ids"] = [speaker2 if i % 2 else speaker1 for i, s in enumerate(sequence) for _ in s]
     instance["mc_token_ids"] = len(instance["input_ids"]) - 1
     instance["lm_labels"] = [-1] * len(instance["input_ids"])
     if lm_labels:
         instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
-    return instance, sequence  # TODO: second arg is never used, delete it
+    return instance
 
 
 def pad_and_tensorize(batch_dict, padding):
@@ -142,9 +138,8 @@ def make_data_lists(args, personachat, tokenizer):
                     candidate_instances = defaultdict(list)
                     history = utterance["history"][-(2 * args.max_history + 1):]
                     for j, candidate in enumerate(utterance["candidates"][-num_candidates:]):
-                        lm_labels = bool(j == num_candidates - 1)
-                        instance, _ = build_input_from_segments(persona, history, candidate,
-                                                                tokenizer, lm_labels)
+                        lm_labels = bool(j == num_candidates-1)
+                        instance = build_input_from_segments(persona, history, candidate, tokenizer, lm_labels)
                         for input_name, input_array in instance.items():
                             candidate_instances[input_name].append(input_array)
                     for k in candidate_instances.keys():
@@ -192,9 +187,13 @@ def train():
     logger.info("Prepare tokenizer, pretrained model and optimizer.")
     tokenizer_class = GPT2Tokenizer if "gpt2" in args.model_checkpoint else OpenAIGPTTokenizer # cant use Autotokenizer because checkpoint could be a Path
     tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
+
+
     model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
     model = model_class.from_pretrained(args.model_checkpoint)
     model.to(args.device)
+
+    # Add special tokens if they are not already added
     add_special_tokens_(model, tokenizer)
     optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=True)
 
@@ -281,6 +280,7 @@ def train():
 
         log_dir = make_logdir(args.model_checkpoint)
         tb_logger = TensorboardLogger(log_dir)
+
         tb_logger.attach(trainer, log_handler=OutputHandler(tag="training", metric_names=["loss"]), event_name=Events.ITERATION_COMPLETED)
         tb_logger.attach(trainer, log_handler=OptimizerParamsHandler(optimizer), event_name=Events.ITERATION_STARTED)
         tb_logger.attach(evaluator, log_handler=OutputHandler(tag="validation", metric_names=list(metrics.keys()), another_engine=trainer), event_name=Events.EPOCH_COMPLETED)
