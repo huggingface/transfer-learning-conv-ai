@@ -99,7 +99,7 @@ def run():
     parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
     parser.add_argument("--max_length", type=int, default=20, help="Maximum length of the output utterances")
     parser.add_argument("--min_length", type=int, default=1, help="Minimum length of the output utterances")
-    parser.add_argument("--seed", type=int, default=42, help="Seed")
+    parser.add_argument("--seed", type=int, default=0, help="Seed")
     parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
     parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
     parser.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
@@ -114,10 +114,13 @@ def run():
             raise ValueError("Interacting with GPT2 requires passing a finetuned model_checkpoint")
         else:
             args.model_checkpoint = download_pretrained_model()
+	
+	
+    if args.seed != 0:
+    	random.seed(args.seed)
+    	torch.random.manual_seed(args.seed)
+    	torch.cuda.manual_seed(args.seed)
 
-    random.seed(args.seed)
-    torch.random.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
 
     logger.info("Get pretrained model and tokenizer")
     tokenizer_class, model_class = (GPT2Tokenizer, GPT2LMHeadModel) if args.model == 'gpt2' else (OpenAIGPTTokenizer, OpenAIGPTLMHeadModel)
