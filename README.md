@@ -88,7 +88,7 @@ This model should give a Hits@1 over 79, perplexity of 20.5 and F1 of 16.5 using
 These numbers are slightly lower than the number we obtained in the ConvAI2 competition. Here is what you can tweak to reach the same results:
 
 - in the ConvAI2 competition we also used tweaked position emebddings so that the history of the dialog always start at with the same embeddings. This is easy to add with pytorch-transformers and should improve the hits@1 metric.
-- in the ConvAI2 competition we used a beam search decoder. While the results are better in term of f1 metric, our feeling is that the human experience is les compelling with beam search versus the nucleus sampling detector which is provided in the present repository.
+- in the ConvAI2 competition we used a beam search decoder. While the results are better in term of f1 metric, our feeling is that the human experience is less compelling with beam search versus the nucleus sampling detector which is provided in the present repository.
 
 ## Using the interaction script
 
