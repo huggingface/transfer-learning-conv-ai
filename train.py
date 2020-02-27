@@ -16,14 +16,14 @@ from ignite.handlers import ModelCheckpoint
 from ignite.metrics import Accuracy, Loss, MetricsLambda, RunningAverage
 from ignite.contrib.handlers import ProgressBar, PiecewiseLinear
 from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, OutputHandler, OptimizerParamsHandler
-from pytorch_transformers import (AdamW, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
+from transformers import (AdamW, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
                                   GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
 
 from utils import get_dataset, make_logdir
 
 SPECIAL_TOKENS = ["<bos>", "<eos>", "<speaker1>", "<speaker2>", "<pad>"]
 ATTR_TO_SPECIAL_TOKEN = {'bos_token': '<bos>', 'eos_token': '<eos>', 'pad_token': '<pad>',
-                         'additional_special_tokens': ('<speaker1>', '<speaker2>')}
+                         'additional_special_tokens': ['<speaker1>', '<speaker2>']}
 MODEL_INPUTS = ["input_ids", "mc_token_ids", "lm_labels", "mc_labels", "token_type_ids"]
 PADDED_INPUTS = ["input_ids", "lm_labels", "token_type_ids"]
 
@@ -42,7 +42,7 @@ def pad_dataset(dataset, padding=0):
     """ Pad the dataset. This could be optimized by defining a Dataset class and padding at the batch level, but this is simpler. """
     max_l = max(len(x) for x in dataset["input_ids"])
     for name in PADDED_INPUTS:
-        dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
+        dataset[name] = [x + [padding if name != "lm_labels" else -100] * (max_l - len(x)) for x in dataset[name]]
     return dataset
 
 
@@ -62,9 +62,9 @@ def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=Fals
     instance["input_ids"] = list(chain(*sequence))
     instance["token_type_ids"] = [speaker2 if i % 2 else speaker1 for i, s in enumerate(sequence) for _ in s]
     instance["mc_token_ids"] = len(instance["input_ids"]) - 1
-    instance["lm_labels"] = [-1] * len(instance["input_ids"])
+    instance["lm_labels"] = [-100] * len(instance["input_ids"])
     if lm_labels:
-        instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
+        instance["lm_labels"] = ([-100] * sum(len(s) for s in sequence[:-1])) + [-100] + sequence[-1][1:]
     return instance
 
 
@@ -227,7 +227,7 @@ def train():
 
     # Prepare metrics - note how we compute distributed metrics
     RunningAverage(output_transform=lambda x: x).attach(trainer, "loss")
-    metrics = {"nll": Loss(torch.nn.CrossEntropyLoss(ignore_index=-1), output_transform=lambda x: (x[0][0], x[1][0])),
+    metrics = {"nll": Loss(torch.nn.CrossEntropyLoss(ignore_index=-100), output_transform=lambda x: (x[0][0], x[1][0])),
                "accuracy": Accuracy(output_transform=lambda x: (x[0][1], x[1][1]))}
     metrics.update({"average_nll": MetricsLambda(average_distributed_scalar, metrics["nll"], args),
                     "average_accuracy": MetricsLambda(average_distributed_scalar, metrics["accuracy"], args)})
@@ -260,7 +260,7 @@ def train():
 
     # On the main process: close tensorboard logger and rename the last checkpoint (for easy re-loading with OpenAIGPTModel.from_pretrained method)
     if args.local_rank in [-1, 0] and args.n_epochs > 0:
-        os.rename(checkpoint_handler._saved[-1][1][-1], os.path.join(log_dir, WEIGHTS_NAME))  # TODO: PR in ignite to have better access to saved file paths (cleaner)
+        os.rename(os.path.join(log_dir, checkpoint_handler._saved[-1][1]), os.path.join(log_dir, WEIGHTS_NAME))  # TODO: PR in ignite to have better access to saved file paths (cleaner)
         tb_logger.close()
 
 if __name__ == "__main__":

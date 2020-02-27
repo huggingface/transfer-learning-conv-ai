@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil
 import unittest
 
-from pytorch_transformers import OpenAIGPTTokenizer, GPT2Tokenizer
+from transformers import OpenAIGPTTokenizer, GPT2Tokenizer
 from train import ATTR_TO_SPECIAL_TOKEN, SPECIAL_TOKENS
 
 class TestSpecialTokenTreatment(unittest.TestCase):
