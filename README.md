@@ -27,6 +27,8 @@ To install using docker please build the self-contained image:
 docker build -t convai .
 ```
 
+_Note: Make sure your Docker setup allocates enough memory to building the container. Building with the default of 1.75GB will fail due to large Pytorch wheel._
+
 You can then enter the image  
 
 ```bash
