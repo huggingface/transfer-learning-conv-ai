@@ -62,7 +62,6 @@ def sample_sequence(personality, history, tokenizer, model, args, current_output
 
     for i in range(args.max_length):
         instance = build_input_from_segments(personality, history, current_output, tokenizer, with_eos=False)
-
         input_ids = torch.tensor(instance["input_ids"], device=args.device).unsqueeze(0)
         token_type_ids = torch.tensor(instance["token_type_ids"], device=args.device).unsqueeze(0)
 
