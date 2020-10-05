@@ -63,7 +63,7 @@ Argument | Type | Default value | Description
 ---------|------|---------------|------------
 dataset_path | `str` | `""` | Path or url of the dataset. If empty download from S3.
 dataset_cache | `str` | `'./dataset_cache.bin'` | Path or url of the dataset cache
-model | `str` | `"openai-gpt"` | Path, url or short name of the model
+model_checkpoint | `str` | `"openai-gpt"` | Path, url or short name of the model
 num_candidates | `int` | `2` | Number of candidates for training
 max_history | `int` | `2` | Number of previous exchanges to keep in history
 train_batch_size | `int` | `4` | Batch size for training
@@ -101,7 +101,7 @@ You can then use the interactive script to interact with the model simply by poi
 Here is an example command line to run the interactive script:
 
 ```bash
-python ./interact.py --model_checkpoint ./data/Apr17_13-31-38_thunder/  # run the interactive script with a training checkpoint
+python ./interact.py --model_checkpoint ./runs/Apr17_13-31-38_thunder/  # run the interactive script with a training checkpoint
 python ./interact.py  # run the interactive script with the finetuned model on our S3
 ```
 
@@ -113,7 +113,8 @@ Argument | Type | Default value | Description
 ---------|------|---------------|------------
 dataset_path | `str` | `""` | Path or url of the dataset. If empty download from S3.
 dataset_cache | `str` | `'./dataset_cache.bin'` | Path or url of the dataset cache
-model | `str` | `"openai-gpt"` | Path, url or short name of the model
+model | `str` | `"openai-gpt"` | Model type (openai-gpt or gpt2)
+model_checkpoint | `str` | `""` | Path, url or short name of the model
 max_history | `int` | `2` | Number of previous utterances to keep in history
 device | `str` | `cuda` if `torch.cuda.is_available()` else `cpu` | Device (cuda or cpu)
 no_sample | action `store_true` | Set to use greedy decoding instead of sampling
