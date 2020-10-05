@@ -148,7 +148,7 @@ The evaluation script accept a few arguments to select the evaluation metric and
 Argument | Type | Default value | Description
 ---------|------|---------------|------------
 eval_type | `str` | `"hits@1"` | Evaluate the model on `hits@1`, `ppl` or `f1` metric on the ConvAI2 validation dataset
-model | `str` | `"openai-gpt"` | Path, url or short name of the model
+model_checkpoint | `str` | `"openai-gpt"` | Path, url or short name of the model. Must be OpenAIGPT.
 max_history | `int` | `2` | Number of previous utterances to keep in history
 device | `str` | `cuda` if `torch.cuda.is_available()` else `cpu` | Device (cuda or cpu)
 no_sample | action `store_true` | Set to use greedy decoding instead of sampling
