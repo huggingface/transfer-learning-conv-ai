@@ -131,6 +131,7 @@ To run the evaluation scripts of the ConvAI2 challenge, you first need to instal
 ```bash
 git clone https://github.com/facebookresearch/ParlAI.git
 cd ParlAI
+git checkout convai2archive
 python setup.py develop
 ```
 
