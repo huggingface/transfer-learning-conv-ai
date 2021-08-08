@@ -44,6 +44,12 @@ You can then run the `interact.py` script on the pretrained model:
 python3 interact.py --model models/
 ```
 
+After running `interact.py` you can easily exit/stop talking with bot by typing:
+
+```bash
+quit
+```
+
 ## Pretrained model
 
 We make a pretrained and fine-tuned model available on our S3 [here](https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/finetuned_chatbot_gpt.tar.gz). The easiest way to download and use this model is just to run the `interact.py` script to talk with the model. Without any argument, this script will automatically download and cache our model.
