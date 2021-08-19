@@ -4,3 +4,4 @@ transformers==2.5.1
 tensorboardX==1.8
 tensorflow  # for tensorboardX
 spacy
+folium==0.8.3
