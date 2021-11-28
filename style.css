@@ -1,0 +1,50 @@
+
+body{
+	font:15px/1.5 Arial, Helvetica,sans-serif;
+	padding: 0;
+	background-color: #f4f3f3;
+}
+
+.container{
+	text-align:center;
+	width:100%;
+	margin: auto;
+	overflow: hidden;
+}
+
+header{
+	background: #03a9f4;
+	border-bottom: #740a39 3px solid;
+	height:120px;
+	width:100%;
+	padding-top:30px;
+
+}
+
+.main-header{
+			text-align:center;
+			background-color: #03a9f4;
+			height:100px;
+			width:100%;
+			margin:0;
+}
+
+.brandname{
+	text-align:center;
+	font-size:30px;
+	color: #161515;
+	margin: 10px;
+}
+
+header h2{
+	text-align:center;
+	color:#fff;
+}
+
+.results{
+	border-radius: 15px 50px;
+    background: #345fe4;
+    padding: 20px;
+    width: 200px;
+    height: 150px;
+}

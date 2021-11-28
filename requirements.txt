@@ -1,6 +1,8 @@
-torch
+torch == 1.7.1
 pytorch-ignite
 transformers==2.5.1
+fastapi ==0.70.0
+uvicorn == 0.15.0
+spacy
 tensorboardX==1.8
 tensorflow  # for tensorboardX
-spacy

@@ -16,6 +16,18 @@ from transformers import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadMod
 from train import SPECIAL_TOKENS, build_input_from_segments, add_special_tokens_
 from utils import get_dataset, download_pretrained_model
 
+from transformers import AutoTokenizer, AutoModel
+from fastapi import FastAPI
+
+from fastapi import FastAPI
+from fastapi import APIRouter, Body
+
+app = FastAPI()
+
+@app.get("/")
+def hello():
+    return {"message":"Hello TutLinks.com"}
+
 def top_filtering(logits, top_k=0., top_p=0.9, threshold=-float('Inf'), filter_value=-float('Inf')):
     """ Filter a distribution of logits using top-k, top-p (nucleus) and/or threshold filtering
         Args:
@@ -87,6 +99,7 @@ def sample_sequence(personality, history, tokenizer, model, args, current_output
 
     return current_output
 
+
 def run():
     parser = ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
@@ -123,8 +136,12 @@ def run():
 
 
     logger.info("Get pretrained model and tokenizer")
+    
+    
     tokenizer_class, model_class = (GPT2Tokenizer, GPT2LMHeadModel) if args.model == 'gpt2' else (OpenAIGPTTokenizer, OpenAIGPTLMHeadModel)
+    global tokenizer
     tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
+    global model
     model = model_class.from_pretrained(args.model_checkpoint)
     model.to(args.device)
     add_special_tokens_(model, tokenizer)
@@ -133,23 +150,27 @@ def run():
     dataset = get_dataset(tokenizer, args.dataset_path, args.dataset_cache)
     personalities = [dialog["personality"] for dataset in dataset.values() for dialog in dataset]
     personality = random.choice(personalities)
-    print(personalities)
     logger.info("Selected personality: %s", tokenizer.decode(chain(*personality)))
 
+    return model, tokenizer, args, personality
+
+model, tokenizer, args, personality = run()
+
+@app.get('/predict/{raw_text}')
+def predictions(raw_text):
+    
     history = []
     while True:
-        raw_text = input(">>> ")
         while not raw_text:
             print('Prompt should not be empty!')
-            raw_text = input(">>> ")
+            raw_text = 'hi'
         history.append(tokenizer.encode(raw_text))
         with torch.no_grad():
             out_ids = sample_sequence(personality, history, tokenizer, model, args)
         history.append(out_ids)
         history = history[-(2*args.max_history+1):]
         out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
-        print(out_text)
+        return {'text': out_text}
 
 
-if __name__ == "__main__":
-    run()
+    
