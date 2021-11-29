@@ -1,0 +1,30 @@
+Collecting opentok
+  Downloading https://files.pythonhosted.org/packages/e5/36/39ff61bab71ad73bfaeab4a5f347dba94ab7889ef7d22958b84c424455b4/opentok-3.1.0.tar.gz
+  Installing build dependencies: started
+  Installing build dependencies: still running...
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+    Preparing wheel metadata: started
+    Preparing wheel metadata: finished with status 'done'
+Collecting python-jose (from opentok)
+  Downloading https://files.pythonhosted.org/packages/bd/2d/e94b2f7bab6773c70efc70a61d66e312e1febccd9e0db6b9e0adf58cbad1/python_jose-3.3.0-py2.py3-none-any.whl
+Requirement already satisfied: requests in c:\users\bunmi\onedrive\documents\lib\site-packages (from opentok) (2.25.0)
+Requirement already satisfied: six in c:\users\bunmi\onedrive\documents\lib\site-packages (from opentok) (1.15.0)
+Requirement already satisfied: pytz in c:\users\bunmi\onedrive\documents\lib\site-packages (from opentok) (2019.3)
+Requirement already satisfied: pyasn1 in c:\users\bunmi\onedrive\documents\lib\site-packages (from python-jose->opentok) (0.4.8)
+Collecting ecdsa!=0.15 (from python-jose->opentok)
+  Downloading https://files.pythonhosted.org/packages/4a/b6/b678b080967b2696e9a201c096dc076ad756fb35c87dca4e1d1a13496ff7/ecdsa-0.17.0-py2.py3-none-any.whl (119kB)
+Requirement already satisfied: rsa in c:\users\bunmi\onedrive\documents\lib\site-packages (from python-jose->opentok) (4.6)
+Requirement already satisfied: idna<3,>=2.5 in c:\users\bunmi\onedrive\documents\lib\site-packages (from requests->opentok) (2.10)
+Requirement already satisfied: urllib3<1.27,>=1.21.1 in c:\users\bunmi\onedrive\documents\lib\site-packages (from requests->opentok) (1.26.2)
+Requirement already satisfied: certifi>=2017.4.17 in c:\users\bunmi\onedrive\documents\lib\site-packages (from requests->opentok) (2020.11.8)
+Requirement already satisfied: chardet<4,>=3.0.2 in c:\users\bunmi\onedrive\documents\lib\site-packages (from requests->opentok) (3.0.4)
+Building wheels for collected packages: opentok
+  Building wheel for opentok (PEP 517): started
+  Building wheel for opentok (PEP 517): finished with status 'done'
+  Created wheel for opentok: filename=opentok-3.1.0-cp37-none-any.whl size=26318 sha256=db4026e59a81901a990ff2badc1e78a888fe684e8773ef83e0c6464aab24ff45
+  Stored in directory: C:\Users\Bunmi\AppData\Local\pip\Cache\wheels\f4\fb\17\0db41a13ec5785399e8047b1d2437725745a19eda37752d691
+Successfully built opentok
+Installing collected packages: ecdsa, python-jose, opentok
+Successfully installed ecdsa-0.17.0 opentok-3.1.0 python-jose-3.3.0
